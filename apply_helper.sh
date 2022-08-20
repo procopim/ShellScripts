@@ -10,80 +10,78 @@
 
 #$1 is the git apply arg
 #$2 is directory; default is current dir if not specified
-#$3 is p arguments for git apply
+#$3 is p arguments for git apply - must set to 0 if not using p flag
 
 #does not handle symbolic links
 
 #assumes patch is created with equal directory levels for the current and comparator file
 # i.e. no use of --directory flag
 
-#CHANGE *.sh to .patch after you're done
+#in case statement, a ';;' terminates a clause
+
 
 #####script starts here#####
 echo -------------------------
-echo Git Apply helper begin...;
-echo please provide args in order:;
-echo {[--stat|--check|--apply] [./ | /directory] [-p args]}
+echo "Git Apply helper begin...";
+echo "correct arguments order:" ;
+echo "[stat|check|apply] [./ | /directory] [-p args]"
 echo -------------------------
-echo
-#read arg
 
 patch_loop()
 {   
     #cd to dir we have our patch files in
-    $(cd $dir)
+    cd $dir
     #map results of find to an indexed array
-    mapfile -t patch_arr < <(dir | find *.patch)
-    declare -a patch_arr
-    patch_arr_len=${#patch_arr[@]}
+    #mapfile -t patch_arr < <(find *.patch)
+    patch_arr=( $(find *.patch))
+    $(declare -a patch_arr)
 
-    for i in patch_arr_len
-    do
-        echo;
-        $(git apply $args $p ${arr[i]});
+    for i in "${patch_arr[@]}"
+    do 
+        git apply $args $p $i;
     done
-    $(cd $cur_dir)
+    cd $cur_dir
 }
+
+#NEED FUNCTION: 
+#  when actually applying, you nav to the current file directory, and from there call git apply
+#  need to account for leading directories. 
 
 cur_dir=$(pwd)
 
-if ["$2" = ""]
+if [ $2 = "./" ]
 then
-    echo "directory is: $(pwd)";
+    echo "patch directory is: $(pwd)";
     dir=$(pwd);
 else
-    echo "directory is: $2";
+    echo "patch directory is: $2";
     dir="$2"
 fi
 
-if ["$3" = ""]
+if [ $3 = 0 ]
 then 
-    echo no -p flags set
+    echo "no -p flags set"
 else    
     echo "-p flag is: $3"
-    p=$3
+    p="-p $3"
+fi
 
 case $1 in 
     "stat")
-        echo "cmd: git apply --stat"; echo;;
-        args="--stat"
-        patch_loop
+        args="--stat --verbose"
+        patch_loop;;
     "check")
-        echo "cmd: git apply --check";echo;;
-        args="--check"
-        patch_loop
+        args="--check --verbose";
+        patch_loop;;
     "apply")
-        echo "cmd: git apply --verbose";echo;;
-        #we need to be able to take the -p args
-        #loop over the files
+        args="--verbose";
+        patch_loop;;
     "revert")
-        echo "cmd: git apply -R --verbose"; echo;;
-        #we need to be able to take the -p args
-        #loop over the files
+        args="-R --verbose";
+        patch_loop;;
     *)
-        echo sorry please specify one of : stat, check, apply, revert;echo;;
+        echo sorry please specify one of : stat, check, apply, revert;
+        echo;;
 esac
 
 echo ---------END-------------
-
-
